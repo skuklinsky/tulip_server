@@ -1,0 +1,44 @@
+import java.net.Socket;
+import java.net.ServerSocket;
+
+import java.io.IOException;
+
+
+class RunServer {
+
+    private static int LISTENING_PORT = 16042;
+
+    public static void main(String[] args) {
+
+        Global global = ReadWrite.readGlobalFromFile("globalObjectAsFile");
+
+        if (global == null) {
+            global = new Global();
+            System.out.println("New Global variable instantiated");
+        } else {
+            System.out.println("Successfully loaded old Global instance from file");
+        }
+
+        ServerSocket serverSocket;
+        Socket connectionSocket;
+        ConnectionThread connectionThread;
+
+        try {
+            serverSocket = new ServerSocket(LISTENING_PORT);
+            System.out.println("Successfully listening on port " + LISTENING_PORT);
+        } catch (IOException e) {
+            System.out.println("Failed to establish a listening socket");
+            return;
+        }
+
+        while (true) {
+            try {
+                connectionSocket = serverSocket.accept();
+                connectionThread = new ConnectionThread(connectionSocket, global);
+                connectionThread.start();
+            } catch (IOException e) {
+                System.out.println("Error establishing a connection");
+            }
+        }
+    }
+}
