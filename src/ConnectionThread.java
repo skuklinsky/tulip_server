@@ -17,13 +17,16 @@ public class ConnectionThread extends Thread {
     public OutputStream outputStream;
     private boolean failedToConnect = false;
     public Global global;
+    public LoginInfo loginInfo;
 
-    public ConnectionThread(Socket connectionSocket, Global global) {
+    public ConnectionThread(Socket connectionSocket, Global global, LoginInfo loginInfo) {
         try {
             this.global = global;
+            this.loginInfo = loginInfo;
             this.connectionAddress = connectionSocket.getInetAddress();
             this.inputStream = connectionSocket.getInputStream();
             this.outputStream = connectionSocket.getOutputStream();
+            global.setOfActiveOutputStreams.add(this.outputStream);
         } catch(IOException e) {
             failedToConnect = true;
         }
@@ -49,14 +52,15 @@ public class ConnectionThread extends Thread {
                 byte[] dataBuffer = new byte[numDataBytes];
                 this.inputStream.read(dataBuffer);
                 String messageReceived = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(dataBuffer)).toString();
-
                 JsonObject jsonReceived = JsonParser.parseString(messageReceived).getAsJsonObject();
                 handleReceivedMessage(jsonReceived);
             } catch (IOException e) {
                 System.out.println("IOException. Connection terminated with " + this.connectionAddress + ". Exiting thread.");
+                global.setOfActiveOutputStreams.remove(this.outputStream);
                 return;
             } catch (IllegalStateException e) {
                 System.out.println("IllegalStateException. Connection terminated with " + this.connectionAddress + ". Exiting thread.");
+                global.setOfActiveOutputStreams.remove(this.outputStream);
                 return;
             }
 

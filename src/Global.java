@@ -14,6 +14,8 @@ public class Global implements Serializable {
     public HashMap<Long, Poast> timePostSubmittedToPoast = new HashMap<>();
     public HashMap<String, LinkedList<Poast>> usernamesToPosts = new HashMap<>();
 
+    public HashSet<OutputStream> setOfActiveOutputStreams = new HashSet<>();
+
     public Global() {
 
         categoriesPopularToPoasts.put("All", new ArrayList<>());

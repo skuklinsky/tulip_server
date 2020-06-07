@@ -40,4 +40,42 @@ public class ReadWrite {
         return null;
     }
 
+    public static void writeLoginInfoToFile(LoginInfo loginInfo, String filepath) {
+        try {
+            FileOutputStream f = new FileOutputStream(new File(filepath));
+            ObjectOutputStream o = new ObjectOutputStream(f);
+
+            o.writeObject(loginInfo);
+
+            o.close();
+            f.close();
+
+            System.out.println("Successfully saved LoginInfo instance to file");
+
+        } catch (IOException e) {
+            System.out.println("Error saving LoginInfo instance: " + e.getMessage());
+        }
+    }
+
+    public static LoginInfo readLoginInfoFromFile(String filepath) {
+        try {
+            FileInputStream fi = new FileInputStream(new File(filepath));
+            ObjectInputStream oi = new ObjectInputStream(fi);
+
+            LoginInfo loginInfo = (LoginInfo) oi.readObject();
+
+            oi.close();
+            fi.close();
+
+            return loginInfo;
+
+        } catch (IOException e) {
+            System.out.println("Error reading LoginInfo instance from file: " + e.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.out.println("Error reading LoginInfo instance from file: " + e.getMessage());
+        }
+
+        return null;
+    }
+
 }
