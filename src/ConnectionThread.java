@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 
 import com.google.gson.*;
 
@@ -18,15 +19,17 @@ public class ConnectionThread extends Thread {
     private boolean failedToConnect = false;
     public Global global;
     public LoginInfo loginInfo;
+    public HashSet<OutputStream> setOfActiveOutputStreams;
 
-    public ConnectionThread(Socket connectionSocket, Global global, LoginInfo loginInfo) {
+    public ConnectionThread(Socket connectionSocket, Global global, LoginInfo loginInfo, HashSet<OutputStream> setOfActiveOutputStreams) {
         try {
             this.global = global;
             this.loginInfo = loginInfo;
             this.connectionAddress = connectionSocket.getInetAddress();
             this.inputStream = connectionSocket.getInputStream();
             this.outputStream = connectionSocket.getOutputStream();
-            global.setOfActiveOutputStreams.add(this.outputStream);
+            this.setOfActiveOutputStreams = setOfActiveOutputStreams;
+            this.setOfActiveOutputStreams.add(this.outputStream);
         } catch(IOException e) {
             failedToConnect = true;
         }
@@ -56,11 +59,11 @@ public class ConnectionThread extends Thread {
                 handleReceivedMessage(jsonReceived);
             } catch (IOException e) {
                 System.out.println("IOException. Connection terminated with " + this.connectionAddress + ". Exiting thread.");
-                global.setOfActiveOutputStreams.remove(this.outputStream);
+                setOfActiveOutputStreams.remove(this.outputStream);
                 return;
             } catch (IllegalStateException e) {
                 System.out.println("IllegalStateException. Connection terminated with " + this.connectionAddress + ". Exiting thread.");
-                global.setOfActiveOutputStreams.remove(this.outputStream);
+                setOfActiveOutputStreams.remove(this.outputStream);
                 return;
             }
 

@@ -1,3 +1,4 @@
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.ServerSocket;
 
@@ -19,7 +20,6 @@ class RunServer {
             System.out.println("New Global variable instantiated");
         } else {
             System.out.println("Successfully loaded old Global instance from file");
-            global.setOfActiveOutputStreams = new HashSet<>();
         }
 
         if (loginInfo == null) {
@@ -28,6 +28,8 @@ class RunServer {
         } else {
             System.out.println("Successfully loaded old LoginInfo instance from file");
         }
+
+        HashSet<OutputStream> setOfActiveOutputStreams = new HashSet<>();
 
         ServerSocket serverSocket;
         Socket connectionSocket;
@@ -44,7 +46,7 @@ class RunServer {
         while (true) {
             try {
                 connectionSocket = serverSocket.accept();
-                connectionThread = new ConnectionThread(connectionSocket, global, loginInfo);
+                connectionThread = new ConnectionThread(connectionSocket, global, loginInfo, setOfActiveOutputStreams);
                 connectionThread.start();
             } catch (IOException e) {
                 System.out.println("Error establishing a connection");

@@ -53,17 +53,40 @@ public class ClientInstructionHandler {
     }
 
     public void handleGetMainFeedPosts() {
+        int numPostsBeingRequested = jsonReceived.get("numPostsBeingRequested").getAsInt();
+        int numPostsAlreadyLoaded = jsonReceived.get("numPostsAlreadyLoaded").getAsInt();
+        long lastPostTimePostSubmitted = jsonReceived.get("lastPostTimePostSubmitted").getAsLong();
         String category = jsonReceived.get("category").getAsString();
         String sortBy = jsonReceived.get("sortBy").getAsString();
 
-        List<Poast> postsQueried;
+        List<Poast> postsQueried = new ArrayList<>();
 
-        if(sortBy.equals("Popular")) {
-            postsQueried = this.connectionThread.global.categoriesPopularToPoasts.get(category);
-        } else {
-            postsQueried = this.connectionThread.global.categoriesNewToPoasts.get(category);
+        if (sortBy.equals("New")) {
+
+            int listSize = this.connectionThread.global.categoriesNewToPoasts.get(category).size();
+
+            if (lastPostTimePostSubmitted == 0) { // numPostsAlreadyLoaded = 0, just load newest posts
+                if (listSize != 0) {
+                    int endIndex = Math.min(listSize, numPostsBeingRequested);
+                    postsQueried = this.connectionThread.global.categoriesNewToPoasts.get(category).subList(0, endIndex);
+                }
+            } else {
+                int index = 0;
+                while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
+                    Poast p = this.connectionThread.global.categoriesNewToPoasts.get(category).get(index);
+                    if (p.timePostSubmitted < lastPostTimePostSubmitted) { // if post is older than lastPostTimePostSubmitted, add it
+                        postsQueried.add(p);
+                    }
+                }
+            }
+        } else if (sortBy.equals("Popular")) {
+            int listSize = this.connectionThread.global.categoriesPopularToPoasts.get(category).size();
+            if (listSize != 0 && (listSize > numPostsAlreadyLoaded)) {
+                int endIndex = Math.min(listSize, numPostsAlreadyLoaded + numPostsBeingRequested);
+                postsQueried = this.connectionThread.global.categoriesPopularToPoasts.get(category).subList(numPostsAlreadyLoaded, endIndex);
+            }
         }
-
+        
         JsonObject jsonToSend = new JsonObject();
         jsonToSend.addProperty("instruction", "getMainFeedPostsResponse");
 
@@ -118,10 +141,6 @@ public class ClientInstructionHandler {
         long timePostSubmitted = System.currentTimeMillis();
         Poast post = new Poast(postTitle, postMessage, votingOptions, correspondingVotes, category, age, gender, posterUsername, timePostSubmitted);
 
-        JsonObject jsonToSend = new JsonObject();
-        jsonToSend.addProperty("instruction", "successfullySubmittedPost");
-        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
-
         this.connectionThread.global.categoriesPopularToPoasts.get(category).add(post);
         this.connectionThread.global.categoriesNewToPoasts.get(category).addFirst(post);
 
@@ -136,7 +155,12 @@ public class ClientInstructionHandler {
 
         this.connectionThread.global.timePostSubmittedToPoast.put(timePostSubmitted, post);
 
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "successfullySubmittedPost");
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+
         ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
+        ReadWrite.writeLoginInfoToFile(this.connectionThread.loginInfo, "loginInfoAsFile");
 
     }
 
@@ -208,7 +232,7 @@ public class ClientInstructionHandler {
         jsonToSend.addProperty("instruction", "serverDowntimeExpected");
         jsonToSend.addProperty("minutesUntilDowntime", minutesUntilDowntime);
 
-        for (OutputStream activeOutputStream : this.connectionThread.global.setOfActiveOutputStreams) {
+        for (OutputStream activeOutputStream : this.connectionThread.setOfActiveOutputStreams) {
             this.connectionThread.global.sendMessage(jsonToSend, activeOutputStream);
         }
     }
