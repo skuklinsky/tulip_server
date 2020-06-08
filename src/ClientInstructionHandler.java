@@ -56,9 +56,10 @@ public class ClientInstructionHandler {
         int numPostsBeingRequested = jsonReceived.get("numPostsBeingRequested").getAsInt();
         int numPostsAlreadyLoaded = jsonReceived.get("numPostsAlreadyLoaded").getAsInt();
         long lastPostTimePostSubmitted = jsonReceived.get("lastPostTimePostSubmitted").getAsLong();
+        boolean fullRefresh = jsonReceived.get("fullRefresh").getAsBoolean(); // true if refreshing, false if requesting more posts as part of infinite scroll
         String category = jsonReceived.get("category").getAsString();
         String sortBy = jsonReceived.get("sortBy").getAsString();
-
+        
         List<Poast> postsQueried = new ArrayList<>();
 
         if (sortBy.equals("New")) {
@@ -86,9 +87,10 @@ public class ClientInstructionHandler {
                 postsQueried = this.connectionThread.global.categoriesPopularToPoasts.get(category).subList(numPostsAlreadyLoaded, endIndex);
             }
         }
-        
+
         JsonObject jsonToSend = new JsonObject();
         jsonToSend.addProperty("instruction", "getMainFeedPostsResponse");
+        jsonToSend.addProperty("fullRefresh", fullRefresh);
 
         if (postsQueried.size() > 0) {
             ArrayList<String> listOfPostsAsStrings = new ArrayList<>();
@@ -143,6 +145,9 @@ public class ClientInstructionHandler {
 
         this.connectionThread.global.categoriesPopularToPoasts.get(category).add(post);
         this.connectionThread.global.categoriesNewToPoasts.get(category).addFirst(post);
+
+        this.connectionThread.global.categoriesPopularToPoasts.get("All").add(post);
+        this.connectionThread.global.categoriesNewToPoasts.get("All").addFirst(post);
 
         LinkedList<Poast> allPostsFromUsername = this.connectionThread.global.usernamesToPosts.get(posterUsername);
         if (allPostsFromUsername == null) {
