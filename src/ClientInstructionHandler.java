@@ -61,6 +61,8 @@ public class ClientInstructionHandler {
         String category = jsonReceived.get("category").getAsString();
         String sortBy = jsonReceived.get("sortBy").getAsString();
 
+        System.out.println(category);
+
         List<Poast> postsQueried = new ArrayList<>();
 
         if (sortBy.equals("New")) {
@@ -69,7 +71,7 @@ public class ClientInstructionHandler {
             int index = 0;
             while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
                 Poast post = this.connectionThread.global.postsNew.get(index);
-                if ((post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0)) { // if post is older than lastPostTimePostSubmitted
+                if ((category.equals("All") || post.category.equals(category)) && (post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0)) { // if post is older than lastPostTimePostSubmitted
                     postsQueried.add(post);
                 }
                 index += 1;

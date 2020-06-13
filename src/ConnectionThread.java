@@ -45,7 +45,6 @@ public class ConnectionThread extends Thread {
 
         while (true) {
             try {
-
                 byte[] lengthHeaderBuffer = new byte[4];
                 this.inputStream.read(lengthHeaderBuffer); // reads in big endian
                 int numDataBytes = ByteBuffer.wrap(lengthHeaderBuffer).getInt();
