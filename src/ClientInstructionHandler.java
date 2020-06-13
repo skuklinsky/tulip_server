@@ -71,8 +71,10 @@ public class ClientInstructionHandler {
             int index = 0;
             while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
                 Poast post = this.connectionThread.global.postsNew.get(index);
-                if ((category.equals("All") || post.category.equals(category)) && (post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0)) { // if post is older than lastPostTimePostSubmitted
+                if ((category.equals("All") || post.category.equals(category)) && ((post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0))) { // if post is older than lastPostTimePostSubmitted
                     postsQueried.add(post);
+                    System.out.println(category);
+                    System.out.println(post.category);
                 }
                 index += 1;
             }
