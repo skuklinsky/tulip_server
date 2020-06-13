@@ -3,6 +3,7 @@ import com.google.gson.JsonObject;
 
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -59,32 +60,41 @@ public class ClientInstructionHandler {
         boolean fullRefresh = jsonReceived.get("fullRefresh").getAsBoolean(); // true if refreshing, false if requesting more posts as part of infinite scroll
         String category = jsonReceived.get("category").getAsString();
         String sortBy = jsonReceived.get("sortBy").getAsString();
-        
+
         List<Poast> postsQueried = new ArrayList<>();
 
         if (sortBy.equals("New")) {
 
-            int listSize = this.connectionThread.global.categoriesNewToPoasts.get(category).size();
-
-            if (lastPostTimePostSubmitted == 0) { // numPostsAlreadyLoaded = 0, just load newest posts
-                if (listSize != 0) {
-                    int endIndex = Math.min(listSize, numPostsBeingRequested);
-                    postsQueried = this.connectionThread.global.categoriesNewToPoasts.get(category).subList(0, endIndex);
+            int listSize = this.connectionThread.global.postsNew.size();
+            int index = 0;
+            while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
+                Poast post = this.connectionThread.global.postsNew.get(index);
+                if ((post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0)) { // if post is older than lastPostTimePostSubmitted
+                    postsQueried.add(post);
                 }
-            } else {
-                int index = 0;
-                while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
-                    Poast p = this.connectionThread.global.categoriesNewToPoasts.get(category).get(index);
-                    if (p.timePostSubmitted < lastPostTimePostSubmitted) { // if post is older than lastPostTimePostSubmitted, add it
-                        postsQueried.add(p);
-                    }
-                }
+                index += 1;
             }
         } else if (sortBy.equals("Popular")) {
-            int listSize = this.connectionThread.global.categoriesPopularToPoasts.get(category).size();
-            if (listSize != 0 && (listSize > numPostsAlreadyLoaded)) {
-                int endIndex = Math.min(listSize, numPostsAlreadyLoaded + numPostsBeingRequested);
-                postsQueried = this.connectionThread.global.categoriesPopularToPoasts.get(category).subList(numPostsAlreadyLoaded, endIndex);
+
+            int listSize = this.connectionThread.global.postsPopular.size();
+            int index = 0;
+            int numPostsSeenThatFitCriteria = 0;
+
+            // move index along in order to skip over posts already seen. For example, if already seen 10 posts in category x, keep adding to index until it has passed 10 posts of category x
+            while ((numPostsSeenThatFitCriteria < numPostsAlreadyLoaded) && (index < listSize)) {
+                Poast post = this.connectionThread.global.postsPopular.get(index);
+                if (category.equals("All") || post.category.equals(category)) {
+                    numPostsSeenThatFitCriteria += 1;
+                }
+                index += 1;
+            }
+
+            while ((postsQueried.size() < numPostsBeingRequested) && (index < listSize)) {
+                Poast post = this.connectionThread.global.postsPopular.get(index);
+                if (category.equals("All") || post.category.equals(category)) {
+                    postsQueried.add(post);
+                }
+                index += 1;
             }
         }
 
@@ -124,7 +134,7 @@ public class ClientInstructionHandler {
         String postTitle = jsonReceived.get("title").getAsString();
         String postMessage = jsonReceived.get("message").getAsString();
         String[] votingOptions = this.gson.fromJson(jsonReceived.get("votingOptions").getAsString(), String[].class);
-        Integer[] correspondingVotes = new Integer[votingOptions.length];
+        int[] correspondingVotes = new int[votingOptions.length]; // autofills with zeros
         String category = jsonReceived.get("category").getAsString();
         String age = jsonReceived.get("age").getAsString();
         String gender = jsonReceived.get("gender").getAsString();
@@ -136,33 +146,26 @@ public class ClientInstructionHandler {
         if (gender.equals("")) {
             gender = null;
         }
-        for (int i = 0; i < correspondingVotes.length; i++) {
-            correspondingVotes[i] = 0;
-        }
 
         long timePostSubmitted = System.currentTimeMillis();
         Poast post = new Poast(postTitle, postMessage, votingOptions, correspondingVotes, category, age, gender, posterUsername, timePostSubmitted);
 
-        this.connectionThread.global.categoriesPopularToPoasts.get(category).add(post);
-        this.connectionThread.global.categoriesNewToPoasts.get(category).addFirst(post);
-
-        this.connectionThread.global.categoriesPopularToPoasts.get("All").add(post);
-        this.connectionThread.global.categoriesNewToPoasts.get("All").addFirst(post);
-
-        LinkedList<Poast> allPostsFromUsername = this.connectionThread.global.usernamesToPosts.get(posterUsername);
-        if (allPostsFromUsername == null) {
-            allPostsFromUsername = new LinkedList<>();
-            allPostsFromUsername.add(post);
-            this.connectionThread.global.usernamesToPosts.put(posterUsername, allPostsFromUsername);
-        } else {
-            allPostsFromUsername.addFirst(post);
-        }
+        this.connectionThread.global.postsPopular.add(post);
+        this.connectionThread.global.postsNew.addFirst(post);
 
         this.connectionThread.global.timePostSubmittedToPoast.put(timePostSubmitted, post);
+
+        LinkedList<Poast> allPostsFromUsername = this.connectionThread.global.usernamesToPosts.getOrDefault(posterUsername, new LinkedList<>());
+        allPostsFromUsername.addFirst(post);
+        if (allPostsFromUsername.size() == 1) { // just created a new LinkedList, need to add to hashMap
+            this.connectionThread.global.usernamesToPosts.put(posterUsername, allPostsFromUsername);
+        }
 
         JsonObject jsonToSend = new JsonObject();
         jsonToSend.addProperty("instruction", "successfullySubmittedPost");
         this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+
+        Collections.sort(this.connectionThread.global.postsPopular);
 
         ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
         ReadWrite.writeLoginInfoToFile(this.connectionThread.loginInfo, "loginInfoAsFile");
@@ -177,13 +180,16 @@ public class ClientInstructionHandler {
 
         if (post != null && voteIndex < post.votingOptions.length) {
             post.correspondingVotes[voteIndex] += numVotes;
+            post.totalVotes += 1;
 
-            ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
             JsonObject jsonToSend = new JsonObject();
             jsonToSend.addProperty("instruction", "successfullyVoted");
             jsonToSend.addProperty("timePostSubmitted", post.timePostSubmitted);
             jsonToSend.addProperty("voteIndex", voteIndex);
             this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+
+            Collections.sort(this.connectionThread.global.postsPopular);
+            ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
         } else {
             JsonObject jsonToSend = new JsonObject();
             jsonToSend.addProperty("instruction", "votingAttemptFailed");

@@ -9,33 +9,26 @@ import java.util.*;
 
 public class Global implements Serializable {
 
-    public HashMap<String, ArrayList<Poast>> categoriesPopularToPoasts = new HashMap<>();
-    public HashMap<String, LinkedList<Poast>> categoriesNewToPoasts = new HashMap<>();
+    public ArrayList<Poast> postsPopular = new ArrayList<>();
+    public LinkedList<Poast> postsNew = new LinkedList<>();
+
     public HashMap<Long, Poast> timePostSubmittedToPoast = new HashMap<>();
     public HashMap<String, LinkedList<Poast>> usernamesToPosts = new HashMap<>();
 
     public Global() {
-
-        categoriesPopularToPoasts.put("All", new ArrayList<>());
-        categoriesPopularToPoasts.put("Is he interested", new ArrayList<>());
-        categoriesPopularToPoasts.put("Is she interested", new ArrayList<>());
-        categoriesPopularToPoasts.put("Should I break up with her", new ArrayList<>());
-
-        categoriesNewToPoasts.put("All", new LinkedList<>());
-        categoriesNewToPoasts.put("Is he interested", new LinkedList<>());
-        categoriesNewToPoasts.put("Is she interested", new LinkedList<>());
-        categoriesNewToPoasts.put("Should I break up with her", new LinkedList<>());
 
     }
 
     public void sendMessage(JsonObject jsonToSend, OutputStream outputStream) {
         Gson gson = new Gson();
         String messageToSend = gson.toJson(jsonToSend);
-        byte[] lengthHeader = ByteBuffer.allocate(4).putInt(messageToSend.length()).array(); // first 4 bytes indicate length of message
-        byte[] data = messageToSend.getBytes();
+
+        byte[] asBytes = messageToSend.getBytes();
+        byte[] lengthHeader = ByteBuffer.allocate(4).putInt(asBytes.length).array();
+
         try {
             outputStream.write(lengthHeader);
-            outputStream.write(data);
+            outputStream.write(asBytes);
         } catch (IOException e) {
             System.out.println("IOException. Error sending message");
             return;

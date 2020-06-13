@@ -1,9 +1,6 @@
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
-
-import java.io.OutputStream;
-import java.io.InputStream;
-import java.io.IOException;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -48,6 +45,7 @@ public class ConnectionThread extends Thread {
 
         while (true) {
             try {
+
                 byte[] lengthHeaderBuffer = new byte[4];
                 this.inputStream.read(lengthHeaderBuffer); // reads in big endian
                 int numDataBytes = ByteBuffer.wrap(lengthHeaderBuffer).getInt();
@@ -55,8 +53,10 @@ public class ConnectionThread extends Thread {
                 byte[] dataBuffer = new byte[numDataBytes];
                 this.inputStream.read(dataBuffer);
                 String messageReceived = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(dataBuffer)).toString();
+
                 JsonObject jsonReceived = JsonParser.parseString(messageReceived).getAsJsonObject();
                 handleReceivedMessage(jsonReceived);
+
             } catch (IOException e) {
                 System.out.println("IOException. Connection terminated with " + this.connectionAddress + ". Exiting thread.");
                 setOfActiveOutputStreams.remove(this.outputStream);
