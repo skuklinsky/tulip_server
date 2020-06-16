@@ -33,10 +33,10 @@ public class Poast implements Serializable, Comparable<Poast> {
 
         // want more popular posts to be first in list, so should be "less than" other posts. If more popular, return negative
 
-        long daysSinceThisPostSubmittedRoundedUp = ((System.currentTimeMillis() - this.timePostSubmitted) / 86400000) + 1;
-        long daysSinceOtherPostedSubmittedRoundedUp = ((System.currentTimeMillis() - o.timePostSubmitted) / 86400000) + 1;
-        double popularityThis = ((double) this.totalVotes) / daysSinceThisPostSubmittedRoundedUp;
-        double popularityOther = ((double) o.totalVotes) / daysSinceOtherPostedSubmittedRoundedUp;
+        double daysSinceThisPostSubmitted = Math.max((System.currentTimeMillis() - this.timePostSubmitted) / 86400000.0, 4); // minimum of 4 hours so that can't have super popular post because was voted on once within a minute
+        double daysSinceOtherPostedSubmitted = Math.max((System.currentTimeMillis() - o.timePostSubmitted) / 86400000.0, 4);
+        double popularityThis = ((double) this.totalVotes) / daysSinceThisPostSubmitted;
+        double popularityOther = ((double) o.totalVotes) / daysSinceOtherPostedSubmitted;
 
         return popularityThis > popularityOther ? -1 : 1;
     }
