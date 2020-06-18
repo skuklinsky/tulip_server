@@ -168,8 +168,6 @@ public class ClientInstructionHandler {
         Collections.sort(this.connectionThread.global.postsPopular);
 
         ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
-        ReadWrite.writeLoginInfoToFile(this.connectionThread.loginInfo, "loginInfoObjectAsFile");
-
     }
 
     public void handleVoteOnPost() {
@@ -187,6 +185,8 @@ public class ClientInstructionHandler {
             jsonToSend.addProperty("timePostSubmitted", post.timePostSubmitted);
             jsonToSend.addProperty("voteIndex", voteIndex);
             this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+
+            System.out.println("hi");
 
             Collections.sort(this.connectionThread.global.postsPopular);
             ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
