@@ -61,8 +61,6 @@ public class ClientInstructionHandler {
         String category = jsonReceived.get("category").getAsString();
         String sortBy = jsonReceived.get("sortBy").getAsString();
 
-        System.out.println(category);
-
         List<Poast> postsQueried = new ArrayList<>();
 
         if (sortBy.equals("New")) {
@@ -73,8 +71,6 @@ public class ClientInstructionHandler {
                 Poast post = this.connectionThread.global.postsNew.get(index);
                 if ((category.equals("All") || post.category.equals(category)) && ((post.timePostSubmitted < lastPostTimePostSubmitted) || (lastPostTimePostSubmitted == 0))) { // if post is older than lastPostTimePostSubmitted
                     postsQueried.add(post);
-                    System.out.println(category);
-                    System.out.println(post.category);
                 }
                 index += 1;
             }
@@ -172,7 +168,7 @@ public class ClientInstructionHandler {
         Collections.sort(this.connectionThread.global.postsPopular);
 
         ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
-        ReadWrite.writeLoginInfoToFile(this.connectionThread.loginInfo, "loginInfoAsFile");
+        ReadWrite.writeLoginInfoToFile(this.connectionThread.loginInfo, "loginInfoObjectAsFile");
 
     }
 
