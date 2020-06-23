@@ -16,12 +16,14 @@ public class ConnectionThread extends Thread {
     private boolean failedToConnect = false;
     public Global global;
     public LoginInfo loginInfo;
+    public ReportedPosts reportedPosts;
     public HashSet<OutputStream> setOfActiveOutputStreams;
 
-    public ConnectionThread(Socket connectionSocket, Global global, LoginInfo loginInfo, HashSet<OutputStream> setOfActiveOutputStreams) {
+    public ConnectionThread(Socket connectionSocket, Global global, LoginInfo loginInfo, ReportedPosts reportedPosts, HashSet<OutputStream> setOfActiveOutputStreams) {
         try {
             this.global = global;
             this.loginInfo = loginInfo;
+            this.reportedPosts = reportedPosts;
             this.connectionAddress = connectionSocket.getInetAddress();
             this.inputStream = connectionSocket.getInputStream();
             this.outputStream = connectionSocket.getOutputStream();

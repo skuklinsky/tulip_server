@@ -2,10 +2,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class ClientInstructionHandler {
 
@@ -49,6 +46,26 @@ public class ClientInstructionHandler {
 
             case "serverDowntimeAlert":
                 handleServerDowntimeAlert();
+                break;
+
+            case "reportPost":
+                handleReportPost();
+                break;
+
+            case "getReportedPosts":
+                handleGetReportedPosts();
+                break;
+
+            case "deletePost":
+                handleDeletePost();
+                break;
+
+            case "blockPoster":
+                handleBlockPoster();
+                break;
+
+            case "reportedPostIsOk":
+                handleReportedPostIsOk();
                 break;
         }
     }
@@ -147,6 +164,13 @@ public class ClientInstructionHandler {
             gender = null;
         }
 
+        if (this.connectionThread.reportedPosts.blockedPosters.contains(posterUsername)) {
+            JsonObject jsonToSend = new JsonObject();
+            jsonToSend.addProperty("instruction", "youAreBlockedFromPosting");
+            this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+            return;
+        }
+
         long timePostSubmitted = System.currentTimeMillis();
         Poast post = new Poast(postTitle, postMessage, votingOptions, correspondingVotes, category, age, gender, posterUsername, timePostSubmitted);
 
@@ -178,15 +202,13 @@ public class ClientInstructionHandler {
 
         if (post != null && voteIndex < post.votingOptions.length) {
             post.correspondingVotes[voteIndex] += numVotes;
-            post.totalVotes += 1;
+            post.totalVotes += numVotes;
 
             JsonObject jsonToSend = new JsonObject();
             jsonToSend.addProperty("instruction", "successfullyVoted");
             jsonToSend.addProperty("timePostSubmitted", post.timePostSubmitted);
             jsonToSend.addProperty("voteIndex", voteIndex);
             this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
-
-            System.out.println("hi");
 
             Collections.sort(this.connectionThread.global.postsPopular);
             ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
@@ -246,6 +268,83 @@ public class ClientInstructionHandler {
         for (OutputStream activeOutputStream : this.connectionThread.setOfActiveOutputStreams) {
             this.connectionThread.global.sendMessage(jsonToSend, activeOutputStream);
         }
+    }
+
+    public void handleReportPost() {
+        Long timePostSubmitted = jsonReceived.get("timePostSubmitted").getAsLong();
+        int numReports = this.connectionThread.reportedPosts.reportedPostsTimeStampsToNumReports.getOrDefault(timePostSubmitted, 0);
+        this.connectionThread.reportedPosts.reportedPostsTimeStampsToNumReports.put(timePostSubmitted, numReports + 1);
+
+        ReadWrite.writeReportedPostsToFile(this.connectionThread.reportedPosts, "reportedPostsObjectAsFile");
+
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "successfullyReportedPost");
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+    }
+
+    public void handleGetReportedPosts() {
+
+        ArrayList<Poast> posts = new ArrayList<>();
+        ArrayList<Integer> numReports = new ArrayList<>();
+
+        for (Map.Entry<Long, Integer> entry : this.connectionThread.reportedPosts.reportedPostsTimeStampsToNumReports.entrySet()) {
+            posts.add(this.connectionThread.global.timePostSubmittedToPoast.get(entry.getKey()));
+            numReports.add(entry.getValue());
+        }
+
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "getReportedPostsResponse");
+
+        ArrayList<String> listOfPostsAsStrings = new ArrayList<>();
+        for (Poast post: posts) {
+            listOfPostsAsStrings.add(this.connectionThread.global.convertPoastToString(post));
+        }
+        jsonToSend.addProperty("posts", this.gson.toJson(listOfPostsAsStrings));
+        jsonToSend.addProperty("numReports", this.gson.toJson(numReports));
+
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+    }
+
+    public void handleDeletePost() {
+        Long timePostSubmitted = jsonReceived.get("timePostSubmitted").getAsLong();
+        Poast p = this.connectionThread.global.timePostSubmittedToPoast.get(timePostSubmitted);
+
+        this.connectionThread.reportedPosts.reportedPostsTimeStampsToNumReports.remove(timePostSubmitted);
+        this.connectionThread.global.postsPopular.remove(p);
+        this.connectionThread.global.postsNew.remove(p);
+        this.connectionThread.global.timePostSubmittedToPoast.remove(timePostSubmitted);
+        this.connectionThread.global.usernamesToPosts.get(p.posterUsername).remove(p);
+
+        ReadWrite.writeReportedPostsToFile(this.connectionThread.reportedPosts, "reportedPostsObjectAsFile");
+        ReadWrite.writeGlobalToFile(this.connectionThread.global, "globalObjectAsFile");
+
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "successfullyDeletedPost");
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+    }
+
+    public void handleBlockPoster() {
+        Long timePostSubmitted = jsonReceived.get("timePostSubmitted").getAsLong();
+        Poast p = this.connectionThread.global.timePostSubmittedToPoast.get(timePostSubmitted);
+
+        this.connectionThread.reportedPosts.blockedPosters.add(p.posterUsername);
+        ReadWrite.writeReportedPostsToFile(this.connectionThread.reportedPosts, "reportedPostsObjectAsFile");
+
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "successfullyBlockedPoster");
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
+    }
+
+    public void handleReportedPostIsOk() {
+        Long timePostSubmitted = jsonReceived.get("timePostSubmitted").getAsLong();
+        Poast p = this.connectionThread.global.timePostSubmittedToPoast.get(timePostSubmitted);
+
+        this.connectionThread.reportedPosts.reportedPostsTimeStampsToNumReports.remove(timePostSubmitted);
+        ReadWrite.writeReportedPostsToFile(this.connectionThread.reportedPosts, "reportedPostsObjectAsFile");
+
+        JsonObject jsonToSend = new JsonObject();
+        jsonToSend.addProperty("instruction", "successfullyMarkedReportedPostAsOk");
+        this.connectionThread.global.sendMessage(jsonToSend, this.connectionThread.outputStream);
     }
 
 }

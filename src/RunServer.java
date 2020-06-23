@@ -14,6 +14,7 @@ class RunServer {
 
         Global global = ReadWrite.readGlobalFromFile("globalObjectAsFile");
         LoginInfo loginInfo = ReadWrite.readLoginInfoFromFile("loginInfoObjectAsFile");
+        ReportedPosts reportedPosts = ReadWrite.readReportedPostsFromFile("ReportedPostsObjectAsFile");
 
         if (global == null) {
             global = new Global();
@@ -27,6 +28,13 @@ class RunServer {
             System.out.println("New LoginInfo variable instantiated");
         } else {
             System.out.println("Successfully loaded old LoginInfo instance from file");
+        }
+
+        if (reportedPosts == null) {
+            reportedPosts = new ReportedPosts();
+            System.out.println("New ReportedPosts variable instantiated");
+        } else {
+            System.out.println("Successfully loaded old ReportedPosts instance from file");
         }
 
         HashSet<OutputStream> setOfActiveOutputStreams = new HashSet<>();
@@ -46,7 +54,7 @@ class RunServer {
         while (true) {
             try {
                 connectionSocket = serverSocket.accept();
-                connectionThread = new ConnectionThread(connectionSocket, global, loginInfo, setOfActiveOutputStreams);
+                connectionThread = new ConnectionThread(connectionSocket, global, loginInfo, reportedPosts, setOfActiveOutputStreams);
                 connectionThread.start();
             } catch (IOException e) {
                 System.out.println("Error establishing a connection");

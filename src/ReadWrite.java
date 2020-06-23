@@ -78,4 +78,42 @@ public class ReadWrite {
         return null;
     }
 
+    public static void writeReportedPostsToFile(ReportedPosts reportedPosts, String filepath) {
+        try {
+            FileOutputStream f = new FileOutputStream(new File(filepath));
+            ObjectOutputStream o = new ObjectOutputStream(f);
+
+            o.writeObject(reportedPosts);
+
+            o.close();
+            f.close();
+
+            System.out.println("Successfully saved ReportedPosts instance to file");
+
+        } catch (IOException e) {
+            System.out.println("Error saving ReportedPosts instance: " + e.getMessage());
+        }
+    }
+
+    public static ReportedPosts readReportedPostsFromFile(String filepath) {
+        try {
+            FileInputStream fi = new FileInputStream(new File(filepath));
+            ObjectInputStream oi = new ObjectInputStream(fi);
+
+            ReportedPosts reportedPosts = (ReportedPosts) oi.readObject();
+
+            oi.close();
+            fi.close();
+
+            return reportedPosts;
+
+        } catch (IOException e) {
+            System.out.println("Error reading ReportedPosts instance from file: " + e.getMessage());
+        } catch (ClassNotFoundException e) {
+            System.out.println("Error reading ReportedPosts instance from file: " + e.getMessage());
+        }
+
+        return null;
+    }
+
 }
